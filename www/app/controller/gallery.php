@@ -16,7 +16,6 @@ function gallery__HANDLER()
 /** Gallery images list controller action */
 function gallery_list($sorter = null, $direction = 'ASC')
 {
-
     // If no sorter is passed
     if(!isset($sorter)) {
         // Load sorter from session if it is there
@@ -139,18 +138,111 @@ function gallery_save()
 }
 
 /**
- * Delete controller action
- *@var string $id Item db identifier
+ * Asynchronous controllers
  */
-function gallery_delete($id)
+
+/** Gallery images list controller action */
+function gallery_async_list($sorter = null, $direction = 'ASC')
 {
-    /*@var \samson\activerecord\gallery $dbItem */
+
+    // If no sorter is passed
+    if(!isset($sorter)) {
+        // Load sorter from session if it is there
+        $sorter = isset($_SESSION['sorter']) ? $_SESSION['sorter'] : null;
+        $direction = isset($_SESSION['direction']) ? $_SESSION['direction'] : null;
+    }
+
+    // Store sorting in a session
+    $_SESSION['sorter'] = $sorter;
+    $_SESSION['direction'] = $direction;
+
+    // Prepare db query object
+    $query = dbQuery('gallery');
+
+    // If sorter is passed
+    if (isset($sorter)/* && in_array($sorter, array('date', 'type'))*/) {
+        // Add sorting condition to db request
+        $query->order_by($sorter, $direction);
+    }
+
+    $result = array('status' => '1', 'html_list' => '');
+    // Iterate all records from "gallery" table
+    foreach ($query->exec() as $dbItem) {
+        /**@var \samson\activerecord\gallery $dbItem``` */
+
+        /* Render view(output method) and pass object received fron DB and
+         * prefix all its fields with "image_", return and gather this outputs
+         * in $items
+         */
+        $result['html_list'] .= m()->view('gallery/item')->image($dbItem)->output();
+    }
+
+    /** Set window title and view to render, pass items variable to view */
+    return $result;
+}
+
+function gallery_async_save()
+{
+    // If we have really received form data
+    if (isset($_POST)) {
+
+        /*@var \samson\activerecord\gallery $dbItem */
+        $dbItem = null;
+
+        // Clear received variable
+        $id = isset($_POST['id']) ? filter_var($_POST['id']) : null;
+
+        /*
+         * Try to recieve one first record from DB by identifier,
+         * in case of success store record into $dbItem variable,
+         * otherwise create new gallery item
+         */
+
+
+        if (!dbQuery('gallery')->id($id)->first($dbItem)) {
+            // Create new instance but without creating a db record
+            $dbItem = new \samson\activerecord\gallery(false);
+        }
+        // At this point we can guarantee that $dbItem is not empty
+
+
+        $tmp_name = $_FILES["file"]["tmp_name"];
+        $name = $_FILES["file"]["name"];
+        $imgsize = $_FILES["file"]["size"]/1024;
+
+
+        // Create upload dir with correct rights
+        if (!file_exists('upload')) {
+            mkdir('upload', 0775);
+        }
+
+        $src = 'upload/'.$name;
+
+        // If file has been created
+        if (move_uploaded_file($tmp_name, $src)) {
+            // Save image name
+            $dbItem->name = filter_var($_POST['name']);
+            // Save image description
+            $dbItem->description = filter_var($_POST['description']);
+            // Store file in upload dir
+            $dbItem->src = $src;
+            $dbItem->imgsize = $imgsize;
+            $dbItem->save();
+        } elseif (isset($id)){
+            $dbItem->name = filter_var($_POST['name']);
+            $dbItem->description = filter_var($_POST['description']);
+            $dbItem->save();
+        }
+    }
+}
+
+function gallery_async_delete($id)
+{
     $dbItem = null;
+    $result = array('status' => '1');
     if (dbQuery('gallery')->id($id)->first($dbItem)) {
         $dbItem->delete();
     }
-
-    // Go to main page
-    url()->redirect('gallery');
+    return $result;
 }
 

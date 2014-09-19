@@ -29,10 +29,11 @@
             height: 150px;
             display: block;
         }
-
     </style>
+    <link href="/css/add-form.css" rel="stylesheet">
 </head>
 <body>
+
 <div class="sorter">
     <a href="<?php url_base('gallery', 'form')?>">ADD PHOTO |</a>
     <a href="<?php url_base('gallery', 'list', 'uploaded', 'asc')?>">DATE ASC |</a>
@@ -40,8 +41,10 @@
     <a href="<?php url_base('gallery', 'list', 'imgsize', 'asc')?>">SIZE ASC |</a>
     <a href="<?php url_base('gallery', 'list', 'imgsize', 'desc')?>">SIZE DESC</a>
 </div>
+
 <ul class="gallery">
     <?php iv('items')?>
 </ul>
+
 </body>
 </html>
