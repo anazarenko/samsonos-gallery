@@ -77,7 +77,7 @@ function gallery_form($id = null)
 }
 
 /**
- * Gallery form controller action
+ * Gallery save controller action
  * @var string $id Item identifier
  */
 function gallery_save()
@@ -137,6 +137,8 @@ function gallery_save()
     url()->redirect('gallery');
 }
 
+
+
 /**
  * Asynchronous controllers
  */
@@ -181,6 +183,58 @@ function gallery_async_list($sorter = null, $direction = 'ASC')
     return $result;
 }
 
+function gallery_async_edit($id){
+
+    if (dbQuery('gallery')->id($id)->first($dbItem)) {
+        $dbItem->name = filter_var($_POST['name']);
+        $dbItem->description = filter_var($_POST['description']);
+        $dbItem->save();
+    }
+
+    return array('status' => '1');
+}
+
+function gallery_async_form($id = null)
+{
+    /*@var \samson\activerecord\gallery $dbItem */
+    $dbItem = null;
+
+    $result = array('status' => '1', 'html_form' => '');
+    /*
+     * Try to recieve one first record from DB by identifier,
+     * if $id == null the request will fail anyway, and in case
+     * of success store record into $dbItem variable
+     */
+
+    if (dbQuery('gallery')->id($id)->first($dbItem)) {
+        // Handle success
+    }
+
+    // Set view file, title and pass, if it os set, found gallery item
+    $result['html_form'] = m()->view('gallery/form')->title('Gallery form')->image($dbItem)->output();
+
+
+    return $result;
+}
+
+function gallery_async_upload()
+{
+    $upload = new \samson\upload\Upload(array('jpg','JPG'));
+    $upload->upload($filePath, $uploadName, $fileName);
+    $_SESSION['filePath'] = $filePath;
+    $_SESSION['uploadName'] = $uploadName;
+    $_SESSION['fileName'] = $fileName;
+    return array(
+        'status'=>'1',
+        'filePath'=> $filePath,
+        'uploadName'=> $uploadName,
+        'fileName'=> $fileName,
+        'sessionFilePath'=> $_SESSION['filePath'],
+        'sessionUploadName'=> $_SESSION['uploadName'],
+        'sessionFileName'=> $_SESSION['fileName']
+    );
+}
+
 function gallery_async_save()
 {
     // If we have really received form data
@@ -189,51 +243,33 @@ function gallery_async_save()
         /*@var \samson\activerecord\gallery $dbItem */
         $dbItem = null;
 
-        // Clear received variable
-        $id = isset($_POST['id']) ? filter_var($_POST['id']) : null;
+        $dbItem = new \samson\activerecord\gallery(false);
 
-        /*
-         * Try to recieve one first record from DB by identifier,
-         * in case of success store record into $dbItem variable,
-         * otherwise create new gallery item
-         */
+        $fileName = $_SESSION['fileName'];
+        $uploadName = $_SESSION['uploadName'];
 
+        unset($_SESSION['uploadName']);
+        unset($_SESSION['fileName']);
+        unset($_SESSION['filePath']);
 
-        if (!dbQuery('gallery')->id($id)->first($dbItem)) {
-            // Create new instance but without creating a db record
-            $dbItem = new \samson\activerecord\gallery(false);
-        }
-        // At this point we can guarantee that $dbItem is not empty
-
-
-        $tmp_name = $_FILES["file"]["tmp_name"];
-        $name = $_FILES["file"]["name"];
         $imgsize = $_FILES["file"]["size"]/1024;
 
+        $src = 'upload/'.$fileName;
 
-        // Create upload dir with correct rights
-        if (!file_exists('upload')) {
-            mkdir('upload', 0775);
-        }
+        // Save image name
+        $dbItem->name = /*$uploadName*/filter_var($_POST['name']);
+        // Save image description
+        $dbItem->description = filter_var($_POST['description']);
+        // Store file in upload dir
+        $dbItem->src = $src;
 
-        $src = 'upload/'.$name;
+        $dbItem->imgsize = $imgsize;
 
-        // If file has been created
-        if (move_uploaded_file($tmp_name, $src)) {
-            // Save image name
-            $dbItem->name = filter_var($_POST['name']);
-            // Save image description
-            $dbItem->description = filter_var($_POST['description']);
-            // Store file in upload dir
-            $dbItem->src = $src;
-            $dbItem->imgsize = $imgsize;
-            $dbItem->save();
-        } elseif (isset($id)){
-            $dbItem->name = filter_var($_POST['name']);
-            $dbItem->description = filter_var($_POST['description']);
-            $dbItem->save();
-        }
+        $dbItem->save();
     }
+    return array(
+        'status'=>'1'
+    );
 }
 
 function gallery_async_delete($id)

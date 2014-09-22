@@ -25,6 +25,7 @@
         "samsonos/seo_sitemap": "*",
         "samsonos/php_i18n": "*",
         "samsonos/php_html":"*",
+        "samsonos/php_upload":"*",
         "squizlabs/php_codesniffer": "2.0.*@dev",
 		"phpunit/phpunit": "4.1.*"
     },

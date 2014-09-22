@@ -7,7 +7,8 @@
 /** Universal main controller action */
 function main__HANDLER()
 {
-    m()->view('main')->title('Main page');
+    gallery_list();
+    //m()->view('gallery/index')->title('Main page');
 }
 
 /** E404 - Page not found controller action */
